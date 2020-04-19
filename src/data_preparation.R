@@ -15,7 +15,7 @@ end_date <- as.Date("2020-04-19")
 start_date <- end_date - 3*365
 covid19_deaths_url <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
 fashion_categories_url <- "./input/label_descriptions.json"
-
+internet_usage_url <- "http://api.worldbank.org/v2/en/indicator/IT.NET.USER.ZS?downloadformat=csv"
 
 ############################## System Parameters ###############################
 
@@ -26,13 +26,13 @@ Sys.setenv(RSTUDIO_PANDOC="C:/Program Files/RStudio/bin/pandoc")
 
 library("jsonlite")
 library("tidyr")
-library("httr")
 library("dplyr")
-library("dbplyr")
+library("wbstats")
 library("janitor")
 library("tidyr")
 library("gtrendsR")
 library("ggplot2")
+library("stringr")
 
 ################################## Functions ###################################
 
@@ -117,9 +117,25 @@ event_L0<-covid_L1 %>% group_by(country_code) %>%
   select(-deaths) %>%
   rename("covid_19_date_0"="date")
 
+# Keep only countries with a large internet penetration
+
+internet_usage_L0 <- wbstats::wb(indicator = "IT.NET.USER.ZS", startdate = 2010, enddate = 2020)
+internet_usage_L1 <- internet_usage_L0 %>% 
+  mutate(date=as.integer(date)) %>%
+  group_by(iso3c) %>%
+  filter(date==max(date)) %>%
+  ungroup() %>%
+  rename("date_internet_usage"="date",
+         "internet_usage"="value") %>%
+  select(iso2c, date_internet_usage, internet_usage)
+
+# Keep only countries where at least 50% population uses internet
+event_L1 <- event_L0 %>% 
+  left_join(internet_usage_L1, by=c("country_code"="iso2c")) %>%
+  filter(internet_usage>50)
 
 ################## Define COVID affected countries to analyze ##################
-country_info_L0 <- event_L0 %>% distinct(country_region, country_code) %>% mutate(id=1)
+country_info_L0 <- event_L1 %>% distinct(country_region, country_code) %>% mutate(id=1)
 
 ############################ Get fashion categories ############################
 
@@ -140,6 +156,5 @@ analysis_data_L0 <- fashion_categories_L1 %>%
   mutate(start_date=start_date,
          end_date=end_date) %>%
   left_join(event_L0, by=c("country_region", "country_code"))
-
 
 

@@ -148,13 +148,66 @@ fashion_categories_L1 <- fashion_categories_L0 %>%
   mutate(name=stringr::str_trim(name),
          id=1)
 
+categories_to_remove <- 
+  c("lapel",
+    "epaulette",
+    "sleeve",
+    "pocket",
+    "neckline",
+    "buckle",
+    "bead",
+    "zipper",
+    "applique",
+    "bow",
+    "flower",
+    "fringe",
+    "ribbon",
+    "rivet",
+    "ruffle",
+    "sequin",
+    "tassel")
+
+fashion_categories_L2 <- fashion_categories_L1 %>% filter(!name %in% categories_to_remove)
+
 ########################## Bring everything together ###########################
 
-analysis_data_L0 <- fashion_categories_L1 %>% 
+# Look which csv files have been downloaded
+downloaded_files<-dir(pattern = "csv", recursive = TRUE, full.names = TRUE)
+downloaded_files<-downloaded_files[grepl("/output/", downloaded_files)]
+
+
+gtrends_L0 <- fashion_categories_L2 %>% 
   full_join(country_info_L0, by="id") %>% 
   select(-id) %>%
   mutate(start_date=start_date,
-         end_date=end_date) %>%
-  left_join(event_L0, by=c("country_region", "country_code"))
+         end_date=end_date,
+         gtrends_range = sprintf("%s %s",start_date, end_date)) %>%
+  left_join(event_L0, by=c("country_region", "country_code")) %>%
+  mutate(file_name = sprintf("./output/%s_%s.csv", country_code, name),
+         downloaded = file_name %in% downloaded_files)
+
+to_download_L0 <- gtrends_L0 %>% filter(!downloaded)
+
+
+
+for(i in seq_along(to_download_L0[[1]])){
+  
+  print(to_download_L0$file_name[i])
+  
+  res_L0<-try(gtrendsR::gtrends(keyword = to_download_L0$name[i],
+                                time = to_download_L0$gtrends_range[i],
+                                geo = to_download_L0$country_code[i],
+                                onlyInterest = TRUE))
+  if(class(res_L0) == "try-error") {
+    stop("Limit has been reached", call. = FALSE)
+  }
+  write.csv(res_L0$interest_over_time, to_download_L0$file_name[i])
+  Sys.sleep(2)
+}
+
+
+
+
+
 
 

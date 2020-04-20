@@ -31,9 +31,10 @@ library("wbstats")
 library("janitor")
 library("tidyr")
 library("gtrendsR")
-library("ggplot2")
 library("stringr")
 library("data.table")
+library("prophet")
+library("ggplot2")
 
 ################################## Functions ###################################
 
@@ -150,6 +151,7 @@ fashion_categories_L1 <- fashion_categories_L0 %>%
   mutate(name=stringr::str_trim(name),
          id=1)
 
+#Remove categories that reflect more attributes
 categories_to_remove <- 
   c("lapel",
     "epaulette",
@@ -176,9 +178,6 @@ fashion_categories_L2 <- fashion_categories_L1 %>% filter(!name %in% categories_
 # Look which csv files have been downloaded
 downloaded_files<-dir(pattern = "csv", recursive = TRUE, full.names = TRUE)
 downloaded_files<-downloaded_files[grepl("/output/", downloaded_files)]
-
-downloaded_files[!grepl(paste0(paste0(country_info_L0$country_code, "_"), collapse = "|"), downloaded_files)]
-
 
 gtrends_L0 <- fashion_categories_L2 %>% 
   full_join(country_info_L0, by="id") %>% 
@@ -226,9 +225,79 @@ rm(df_list)
 
 # Remove unnecessary data
 df_L1 <- df_L0 %>%
-  select(-c("gprop", "category"))
-
+  select(-c("gprop", "category", "time", "X")) %>%
+  mutate(date=as.Date(date))
 
 ############################ Attach COVID-19 dates #############################
+df_L2 <- event_L1 %>% 
+  select(country_region, country_code, covid_19_date_0) %>%
+  inner_join(df_L1, by=c("country_code"="geo"))
 
+# Check if any NA
+any(is.na(df_L2))
+
+# Before COVID-19 100 deaths and after COVID-19 100 deaths dummy, remove low observations
+df_L3 <- df_L2 %>% 
+  mutate(covid19_situation = case_when(date < (covid_19_date_0-7) ~ "Before 100 deaths caused by COVID-19",
+                                       date >= (covid_19_date_0-7) ~ "After 100 deaths caused by COVID-19")) %>%
+  group_by(country_code, keyword) %>%
+  mutate(hits_median=median(hits)) %>%
+  ungroup() %>%
+  filter(hits_median>15) %>%
+  select(-hits_median)
+
+
+######################### Data to predict for Prophet ##########################
+prophet_L0 <- df_L3 %>% filter(covid19_situation == "Before 100 deaths caused by COVID-19")
+
+# Define periods to predict
+prophet_L1 <- prophet_L0 %>%
+  group_by(country_code) %>%
+  mutate(periods=as.numeric((end_date-max(date))/7)) %>%
+  ungroup() %>%
+  rename("ds"="date", "y"="hits")
+
+# Function to run prophet on each group
+prophet_modelling<-function(x) {
+  df <- x[,c("ds", "y")]
+  periods<-max(x$periods)
+  m <- prophet::prophet(df, weekly.seasonality = TRUE)
+  future <- make_future_dataframe(m, periods = periods) %>% top_n(periods, ds)
+  forecast <- predict(m, future) %>% 
+    select(ds, yhat) %>% 
+    rename("y"="yhat") %>%
+    mutate(country_region = x$country_region[1],
+           country_code = x$country_code[1],
+           covid_19_date_0 = x$covid_19_date_0[1],
+           keyword = x$keyword[1],
+           periods = periods,
+           covid19_situation= "Expected behaviour without COVID-19") %>%
+    select(country_region,
+           country_code,
+           covid_19_date_0,
+           ds,
+           y,
+           keyword,
+           covid19_situation,
+           periods)
+  
+  y<-rbind(x, forecast)
+  return(y)
+}
+
+# Loop through predictions
+prophet_L2 <- prophet_L1 %>%
+  group_by(country_code, keyword) %>%
+  do(prophet_modelling(.)) %>% ungroup()
+
+prophet_L2$periods<-NULL
+
+# Bring everything together
+df_L4<-df_L3 %>% 
+  filter(covid19_situation=="After 100 deaths caused by COVID-19") %>%
+  rename("ds"="date", "y"="hits") %>%
+  union_all(prophet_L2)
+
+# Save summary
+fwrite(df_L4, file = "./output/summary/expected_vs_covid_google_searches.csv")
 

@@ -18,19 +18,19 @@ knitr::opts_chunk$set(
 
 ### Objective:
 
-The goal of this repository is to document through open-source data the impact of COVID-19 on customer' behaviour in the fashion retailing sector.
+The goal of this repository is to document through open-source data the impact of COVID-19 on customer' behaviour in the fashion retailing sector. This is just a first take of customer behaviour.
 
 ### Methodology:
 
-The methodology is simple, in summarized fashion the most important steps:
+The methodology is simple - the following main steps are followed:
 
-1. Google Trends search data is extracted for the main fashion categories for all the countries that have suffered since more than two weeks ago from 100 deaths due to COVID-19.
-2. Define the date as event 0, where a country reached 100 cummulative deaths due to COVID-19. Countries, which have not reached this point for longer than two weeks, have been removed.
-3. Based on the data before event 0, an estimation based on historical data is made of how customer behaviour should have been if COVID-19 would not have happened. For this step, the [prophet forecasting method](https://facebook.github.io/prophet/) is chosen to predict Google searches.
+1. Google search data of general fashion categories is extracted for all the countries that have suffered since more than two weeks ago from 100 deaths caused by COVID-19.
+2. Define the date as event 0, where a country reached 100 cummulative deaths caused by COVID-19. Countries, which have not reached this point for longer than two weeks, have been removed.
+3. Based on the search data before event 0, a search estimation is made if COVID-19 would not have happened. For this step, the [prophet forecasting method](https://facebook.github.io/prophet/) is chosen to predict Google searches.
 4. Last but not least, expected predicted results are compared with real search values for each category at each country. Results can be found [here as plot images](https://github.com/matbmeijer/covid19_fashion_trends/tree/master/output/plots).
 
 
-Here is am xemple for Spain:
+Here is an example for Spain:
 
 <center><img src="https://github.com/matbmeijer/covid19_fashion_trends/blob/master/output/plots/ES_plot2.png?raw=true"></center>
 

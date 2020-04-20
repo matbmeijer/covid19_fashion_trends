@@ -5,7 +5,6 @@
 
 
 ############################ Functional Parameters #############################
-
 # Environment
 
 update_data <- FALSE

@@ -1,4 +1,4 @@
-# COVID-19 impact on fashion retailing consumer behaviour
+# COVID-19' impact on fashion retailing consumer behaviour
 Descriptive analysis of the impact of COVID-19 on fashion retailing consumer behaviour.
 
 ### Data sources:

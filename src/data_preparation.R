@@ -33,6 +33,7 @@ library("tidyr")
 library("gtrendsR")
 library("ggplot2")
 library("stringr")
+library("data.table")
 
 ################################## Functions ###################################
 
@@ -109,13 +110,14 @@ covid_L1<-covid_L0 %>% mutate(date=as.Date(date, "x%m_%d_%y"),
   filter(!is.na(country_code)) %>%
   select(country_region, country_code, date, deaths)
 
-# Define event 0 as moment with 100 deaths, keep only some countries
+# Define event 0 as moment with 100 deaths, keep only countries where covid19 has hit for at least two weeks
 event_L0<-covid_L1 %>% group_by(country_code) %>%
   filter(deaths>=100) %>%
   filter(date==min(date)) %>% 
   ungroup() %>%
   select(-deaths) %>%
-  rename("covid_19_date_0"="date")
+  rename("covid_19_date_0"="date") %>%
+  filter(covid_19_date_0<(end_date-14))
 
 # Keep only countries with a large internet penetration
 
@@ -175,6 +177,8 @@ fashion_categories_L2 <- fashion_categories_L1 %>% filter(!name %in% categories_
 downloaded_files<-dir(pattern = "csv", recursive = TRUE, full.names = TRUE)
 downloaded_files<-downloaded_files[grepl("/output/", downloaded_files)]
 
+downloaded_files[!grepl(paste0(paste0(country_info_L0$country_code, "_"), collapse = "|"), downloaded_files)]
+
 
 gtrends_L0 <- fashion_categories_L2 %>% 
   full_join(country_info_L0, by="id") %>% 
@@ -189,6 +193,7 @@ gtrends_L0 <- fashion_categories_L2 %>%
 to_download_L0 <- gtrends_L0 %>% filter(!downloaded)
 
 
+####################### Download Data from Google Trends #######################
 
 for(i in seq_along(to_download_L0[[1]])){
   
@@ -206,8 +211,24 @@ for(i in seq_along(to_download_L0[[1]])){
 }
 
 
+################################ Bind all data #################################
+
+downloaded_files<-dir(pattern = "csv", recursive = TRUE, full.names = TRUE)
+downloaded_files<-downloaded_files[grepl("/output/", downloaded_files)]
+
+# Keep only non-empty tables
+downloaded_files<-downloaded_files[file.size(downloaded_files)>3]
+df_list<-lapply(downloaded_files, read.csv, stringsAsFactors = FALSE)
+df_L0<-data.table::rbindlist(df_list)
+
+# Delete list
+rm(df_list)
+
+# Remove unnecessary data
+df_L1 <- df_L0 %>%
+  select(-c("gprop", "category"))
 
 
-
+############################ Attach COVID-19 dates #############################
 
 

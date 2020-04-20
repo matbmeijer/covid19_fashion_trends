@@ -18,23 +18,23 @@ sector.
 The methodology is simple, in summarized fashion the most important
 steps:
 
-  - Google Trends search data is extracted for the main fashion
+1.  Google Trends search data is extracted for the main fashion
     categories for all the countries that have suffered since more than
     two weeks ago from 100 deaths due to COVID-19.
-  - Define the date as event 0, where a country reached 100 cummulative
+2.  Define the date as event 0, where a country reached 100 cummulative
     deaths due to COVID-19. Countries, which have not reached this point
     for longer than two weeks, have been removed.
-  - Based on the data before event 0, an estimation based on historical
+3.  Based on the data before event 0, an estimation based on historical
     data is made of how customer behaviour should have been if COVID-19
     would not have happened. For this step, the [prophet forecasting
     method](https://facebook.github.io/prophet/) is chosen to predict
     Google searches.
-  - Last but not least, expected predicted results are compared with
+4.  Last but not least, expected predicted results are compared with
     real search values for each category at each country. Results can be
     found [here as plot
-    images](https://github.com/matbmeijer/covid19_fashion_trends/tree/master/output/plots)
+    images](https://github.com/matbmeijer/covid19_fashion_trends/tree/master/output/plots).
 
-Here is axemple for
+Here is am xemple for
 Spain:
 
 <center>

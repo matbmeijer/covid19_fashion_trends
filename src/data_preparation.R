@@ -9,6 +9,7 @@
 
 update_data <- FALSE
 update_time <- FALSE
+save_images <- FALSE
 
 if(!udpate_time){
   end_date <- as.Date("2020-04-19")
@@ -39,7 +40,8 @@ library("stringr")
 library("data.table")
 library("prophet")
 library("ggplot2")
-library("plotly")
+library("trelliscopejs")
+library("purrr")
 
 ################################## Functions ###################################
 
@@ -360,36 +362,81 @@ df_L5 <- df_L4 %>%
 
 
 ############################# Plot full time line ##############################
-country_codes <- unique(df_L5$`Country Code`)
-
-for(i in country_codes){
-  plot_df_L0 <- df_L5 %>% filter(`Country Code` == i)
-  plot_L0<-plot_df_L0 %>% ggplot(aes(x=Date, y=`Google Search Value`, color=`COVID-19 Situation`)) + 
-    geom_line(size=0.6, alpha=0.8) + 
-    geom_vline(xintercept=(plot_df_L0$covid_19_date_0[1]-7), linetype="dotted") + 
-    facet_wrap(~`Fashion Category`) + 
-    theme_minimal() +
-    labs(title = sprintf("Google Searches for different fashion categories in %s", plot_df_L0$Country[1]),
-         color = "COVID-19 situation") +
-    theme(legend.position = "bottom",
-          axis.text.x = element_text(angle = 45)) +
-    guides(colour = guide_legend(override.aes = list(alpha=1, size=1))) +
-    scale_color_manual(values=color_palette_v2())
-  ggsave(filename = sprintf("./output/plots/%s_plot1.png", i), plot_L0, width = 15)
+if(save_images) {
   
-  ################################ Plot last year ################################
-  plot_L1<-plot_df_L0 %>% 
-    filter(year(Date)==2020) %>%
-    ggplot(aes(x=Date, y=`Google Search Value`, color=`COVID-19 Situation`)) + 
-    geom_line(size=0.6, alpha=0.8) + 
-    geom_vline(xintercept=(plot_df_L0$covid_19_date_0[1]-7), linetype="dotted") + 
-    facet_wrap(~`Fashion Category`) +
-    theme_minimal() +
-    labs(title = sprintf("Google Searches for different fashion categories in %s", plot_df_L0$Country[1]),
-         color = "COVID-19 situation") +
-    theme(legend.position = "bottom",
-          axis.text.x = element_text(angle = 45)) +
-    guides(colour = guide_legend(override.aes = list(alpha=1, size=1))) +
-    scale_color_manual(values=color_palette_v2())
-  ggsave(filename = sprintf("./output/plots/%s_plot2.png", i), plot_L1, width = 15)
-}  
+  country_codes <- unique(df_L5$`Country Code`)
+  
+  for(i in country_codes){
+    plot_df_L0 <- df_L5 %>% filter(`Country Code` == i)
+    plot_L0<-plot_df_L0 %>% ggplot(aes(x=Date, y=`Google Search Value`, color=`COVID-19 Situation`)) + 
+      geom_line(size=0.6, alpha=0.8) + 
+      geom_vline(xintercept=(plot_df_L0$covid_19_date_0[1]-7), linetype="dotted") + 
+      facet_wrap(~`Fashion Category`) + 
+      theme_minimal() +
+      labs(title = sprintf("Google Searches for different fashion categories in %s", plot_df_L0$Country[1]),
+           color = "COVID-19 situation") +
+      theme(legend.position = "bottom",
+            axis.text.x = element_text(angle = 45)) +
+      guides(colour = guide_legend(override.aes = list(alpha=1, size=1))) +
+      scale_color_manual(values=color_palette_v2())
+    ggsave(filename = sprintf("./output/plots/%s_plot1.png", i), plot_L0, width = 15)
+    
+    ################################ Plot last year ################################
+    plot_L1<-plot_df_L0 %>% 
+      filter(year(Date)==2020) %>%
+      ggplot(aes(x=Date, y=`Google Search Value`, color=`COVID-19 Situation`)) + 
+      geom_line(size=0.6, alpha=0.8) + 
+      geom_vline(xintercept=(plot_df_L0$covid_19_date_0[1]-7), linetype="dotted") + 
+      facet_wrap(~`Fashion Category`) +
+      theme_minimal() +
+      labs(title = sprintf("Google Searches for different fashion categories in %s", plot_df_L0$Country[1]),
+           color = "COVID-19 situation") +
+      theme(legend.position = "bottom",
+            axis.text.x = element_text(angle = 45)) +
+      guides(colour = guide_legend(override.aes = list(alpha=1, size=1))) +
+      scale_color_manual(values=color_palette_v2())
+    ggsave(filename = sprintf("./output/plots/%s_plot2.png", i), plot_L1, width = 15)
+  }  
+}
+
+################################# Trelliscope ##################################
+df_L6 <- df_L5 %>% 
+  filter(year(Date)==2020) %>%
+  mutate(`COVID-19 Situation`=gsub("Consumer behaviour after 100 deaths in home country caused by COVID-19",
+                            "Consumer behaviour after 100 deaths\nin home country caused by COVID-19", 
+                            `COVID-19 Situation`),
+  `COVID-19 Situation`=gsub("Consumer behaviour before COVID-19 in home country",
+                            "Consumer behaviour before\nCOVID-19 in home country", 
+                            `COVID-19 Situation`),
+  `COVID-19 Situation`=gsub("Expected consumer behaviour without COVID-19",
+                            "Expected consumer\nbehaviour without COVID-19", 
+                            `COVID-19 Situation`)) %>%
+  select(-c("Country Code", "covid_19_date_0"))  %>%
+  group_by(Country, `Fashion Category`) %>%
+  nest()
+
+# Function to plot ggplot2
+plotting <- function(data){
+  p<-ggplot(data, aes(x=Date, y=`Google Search Value`, color=`COVID-19 Situation`)) +
+  geom_line() +
+  theme_light() +
+    ylim(0,100) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45)) +
+  guides(colour = guide_legend(nrow=2, byrow=TRUE, override.aes = list(alpha=1, size=0.5))) +
+  scale_color_manual(values=color_palette_v2())
+  return(p)
+}
+
+df_L7 <- df_L6 %>%
+  mutate(data_plot = map_plot(data, 
+                              plotting))
+
+
+############################### Plot trelliscope ###############################
+df_L7 %>%
+  trelliscope(name = "Impact of COVID-19 on Consumer Behaviour",
+              nrow = 2,
+              ncol = 4,
+              path = "./pages")

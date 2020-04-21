@@ -11,7 +11,7 @@
 
 The goal of this repository is to document through open-source data the
 impact of COVID-19 on customer’ behaviour in the fashion retailing
-sector.
+sector. Last updated at 2020-04-21.
 
 ### Methodology:
 

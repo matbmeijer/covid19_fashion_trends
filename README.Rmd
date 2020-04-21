@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 ### Objective:
 
-The goal of this repository is to document through open-source data the impact of COVID-19 on customer' behaviour in the fashion retailing sector.
+The goal of this repository is to document through open-source data the impact of COVID-19 on customer' behaviour in the fashion retailing sector. Last updated at `r Sys.Date()`.
 
 ### Methodology:
 

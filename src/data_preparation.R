@@ -350,7 +350,7 @@ df_L4$`Google Search Value`
 ############################# Plotting countrywise #############################
 df_L5 <- df_L4 %>%
   mutate(Date = as.Date(Date),
-         `Google Search Value` = as.Date(`Google Search Value`)) %>%
+         `COVID-19 Date 0` = as.Date(`COVID-19 Date 0`)) %>%
   mutate_if(is.numeric, round, 2) %>%
   mutate(
     `COVID-19 Situation`=gsub("Consumer behaviour after 75 deaths in home country caused by COVID-19",
@@ -414,7 +414,7 @@ df_L6 <- df_L5 %>%
   `COVID-19 Situation`=gsub("Expected consumer behaviour without COVID-19",
                             "Expected consumer\nbehaviour without COVID-19", 
                             `COVID-19 Situation`)) %>%
-  select(-c("Country Code", "covid_19_date_0"))  %>%
+  select(-c("Country Code", "COVID-19 Date 0"))  %>%
   group_by(Country, `Fashion Category`) %>%
   nest()
 
@@ -427,7 +427,7 @@ plotting <- function(data){
   theme(legend.position = "bottom",
         legend.title = element_blank(),
         axis.text.x = element_text(angle = 45)) +
-  guides(colour = guide_legend(nrow=2, byrow=TRUE, override.aes = list(alpha=1, size=0.5))) +
+  guides(colour = guide_legend(nrow=3, byrow=TRUE, override.aes = list(alpha=1, size=0.3))) +
   scale_color_manual(values=color_palette_v2())
   return(p)
 }
@@ -441,5 +441,16 @@ df_L7 <- df_L6 %>%
 df_L7 %>%
   trelliscope(name = "Impact of COVID-19 on Consumer Behaviour",
               nrow = 2,
-              ncol = 4,
+              ncol = 5,
               path = "./pages")
+
+
+
+################ Save countries summary and fashion categories #################
+
+convered_countries <- df_L5 %>% select(Country) %>% unique() %>% arrange()
+fashion_categories <- df_L5 %>% select(`Fashion Category`) %>% unique() %>% arrange()
+
+
+fwrite(x = convered_countries, file =  "./output/summary/covered_countries.csv")
+fwrite(x = fashion_categories, file =  "./output/summary/fashion_categories.csv")

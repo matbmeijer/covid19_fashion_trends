@@ -442,7 +442,7 @@ df_L7 %>%
   trelliscope(name = "Impact of COVID-19 on Consumer Behaviour",
               nrow = 2,
               ncol = 5,
-              path = "./pages")
+              path = "./docs")
 
 
 

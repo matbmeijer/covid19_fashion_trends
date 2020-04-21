@@ -7,11 +7,11 @@
 ############################ Functional Parameters #############################
 # Environment
 
-update_data <- FALSE
-update_time <- FALSE
-save_images <- FALSE
+update_data <- TRUE
+update_time <- TRUE
+save_images <- TRUE
 
-if(!udpate_time){
+if(!update_time){
   end_date <- as.Date("2020-04-19")
 } else {
   end_date <- Sys.Date()
@@ -135,9 +135,9 @@ if(update_data){
     filter(!is.na(country_code)) %>%
     select(country_region, country_code, date, deaths)
   
-  # Define event 0 as moment with 100 deaths, keep only countries where covid19 has hit for at least two weeks
+  # Define event 0 as moment with 75 deaths, keep only countries where covid19 has hit for at least two weeks
   event_L0<-covid_L1 %>% group_by(country_code) %>%
-    filter(deaths>=100) %>%
+    filter(deaths>=75) %>%
     filter(date==min(date)) %>% 
     ungroup() %>%
     select(-deaths) %>%
@@ -262,11 +262,14 @@ if(update_data){
   
   # Check if any NA
   any(is.na(df_L2))
+  table(df_L2$hits)
+  # Before COVID-19 75 deaths and after COVID-19 75 deaths dummy, remove low observations
   
-  # Before COVID-19 100 deaths and after COVID-19 100 deaths dummy, remove low observations
   df_L3 <- df_L2 %>% 
-    mutate(covid19_situation = case_when(date < (covid_19_date_0-7) ~ "Before 100 deaths caused by COVID-19",
-                                         date >= (covid_19_date_0-7) ~ "After 100 deaths caused by COVID-19")) %>%
+    mutate(covid19_situation = case_when(date < (covid_19_date_0) ~ "Before 75 deaths caused by COVID-19",
+                                         date >= (covid_19_date_0) ~ "After 75 deaths caused by COVID-19"),
+           hits = gsub("<1", "0", hits),
+           hits = as.numeric(hits)) %>%
     group_by(country_code, keyword) %>%
     mutate(hits_median=median(hits)) %>%
     ungroup() %>%
@@ -275,7 +278,7 @@ if(update_data){
   
   
   ######################### Data to predict for Prophet ##########################
-  prophet_L0 <- df_L3 %>% filter(covid19_situation == "Before 100 deaths caused by COVID-19")
+  prophet_L0 <- df_L3 %>% filter(covid19_situation == "Before 75 deaths caused by COVID-19")
   
   # Define periods to predict
   prophet_L1 <- prophet_L0 %>%
@@ -323,11 +326,11 @@ if(update_data){
   
   # Bring everything together
   df_L4 <- df_L3 %>% 
-    filter(covid19_situation=="After 100 deaths caused by COVID-19") %>%
+    filter(covid19_situation=="After 75 deaths caused by COVID-19") %>%
     rename("ds"="date", "y"="hits") %>%
     union_all(prophet_L2) %>%
-    mutate(covid19_situation = case_when(covid19_situation == "After 100 deaths caused by COVID-19" ~ "Consumer behaviour after 100 deaths in home country caused by COVID-19",
-                                         covid19_situation == "Before 100 deaths caused by COVID-19" ~ "Consumer behaviour before COVID-19 in home country",
+    mutate(covid19_situation = case_when(covid19_situation == "After 75 deaths caused by COVID-19" ~ "Consumer behaviour after 75 deaths in home country caused by COVID-19",
+                                         covid19_situation == "Before 75 deaths caused by COVID-19" ~ "Consumer behaviour before COVID-19 in home country",
                                          covid19_situation == "Expected behaviour without COVID-19" ~ "Expected consumer behaviour without COVID-19"),
            keyword=stringr::str_to_title(keyword)) %>%
     rename("Date"="ds",
@@ -343,15 +346,15 @@ if(update_data){
 } else {
   df_L4 <- read.csv(file = "./output/summary/expected_vs_covid_google_searches.csv", stringsAsFactors = FALSE, check.names = FALSE)
 }
-
+df_L4$`Google Search Value`
 ############################# Plotting countrywise #############################
 df_L5 <- df_L4 %>%
   mutate(Date = as.Date(Date),
-         covid_19_date_0 = as.Date(covid_19_date_0)) %>%
+         `Google Search Value` = as.Date(`Google Search Value`)) %>%
   mutate_if(is.numeric, round, 2) %>%
   mutate(
-    `COVID-19 Situation`=gsub("Consumer behaviour after 100 deaths in home country caused by COVID-19",
-                              "Consumer behaviour after 100 deaths\nin home country caused by COVID-19", 
+    `COVID-19 Situation`=gsub("Consumer behaviour after 75 deaths in home country caused by COVID-19",
+                              "Consumer behaviour after 75 deaths\nin home country caused by COVID-19", 
                               `COVID-19 Situation`),
     `COVID-19 Situation`=gsub("Consumer behaviour before COVID-19 in home country",
                               "Consumer behaviour before\nCOVID-19 in home country", 
@@ -402,8 +405,8 @@ if(save_images) {
 ################################# Trelliscope ##################################
 df_L6 <- df_L5 %>% 
   filter(year(Date)==2020) %>%
-  mutate(`COVID-19 Situation`=gsub("Consumer behaviour after 100 deaths in home country caused by COVID-19",
-                            "Consumer behaviour after 100 deaths\nin home country caused by COVID-19", 
+  mutate(`COVID-19 Situation`=gsub("Consumer behaviour after 75 deaths in home country caused by COVID-19",
+                            "Consumer behaviour after 75 deaths\nin home country caused by COVID-19", 
                             `COVID-19 Situation`),
   `COVID-19 Situation`=gsub("Consumer behaviour before COVID-19 in home country",
                             "Consumer behaviour before\nCOVID-19 in home country", 
